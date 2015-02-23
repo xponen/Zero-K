@@ -34,8 +34,8 @@ local lineage = {} --keep track of unit ownership: Is populated when gadget give
 local afkTeams = {}
 local tickTockCounter = {} --remember how many second a player is in AFK mode. To add a delay before unit transfer commence.
 local unitAlreadyFinished = {}
-local oldTeam = {} -- team which player was on last frame
-local oldAllyTeam = {} -- allyTeam which player was on last frame
+local oriTeam = {} -- team which player was on before resign
+local oriAllyTeam = {} -- allyTeam which player was on before resign
 local factories = {}
 local transferredFactories = {} -- unitDef and health states of the unit that was being produced be the transferred factory
 
@@ -214,6 +214,20 @@ local function TransferUnitAndKeepProduction(unitID, newTeamID, given)
 	GG.allowTransfer = false
 end
 
+function gadget:Initialize()
+	local players = spGetPlayerList()
+	for i=1,#players do
+		local playerID = players[i]
+		local _,_,_,team,allyTeam = spGetPlayerInfo(playerID)
+		local _,_,_,isAI = spGetTeamInfo(team)
+		if (team and not isAI) then
+			--save team & allyTeam so that if player resign and goes to team 0 we could reuse it 
+			oriTeam[playerID] = team
+			oriAllyTeam[playerID] = allyTeam
+		end
+	end
+end
+
 function gadget:GameFrame(n)
 	gameFrame = n;
 
@@ -236,27 +250,22 @@ function gadget:GameFrame(n)
 
 		for i=1,#players do
 			local playerID = players[i]
-			local name,active,spec,team,allyTeam,ping = spGetPlayerInfo(playerID)
+			local name,active,spec,team,allyTeam,ping = spGetPlayerInfo(playerID) --definition: "not active" is disconnected and/or AFK, "spec" is spectator and/or resignee. 
 
 			local justResigned = false
-			if oldTeam[playerID] then
-				if spec then
-					active = false
-					spec = false
-					team = oldTeam[playerID]
-					allyTeam = oldAllyTeam[playerID]
-					oldTeam[playerID] = nil
-					oldAllyTeam[playerID] = nil
-					justResigned = true
-				end
-			elseif team and not spec then
-				oldTeam[playerID] = team
-				oldAllyTeam[playerID] = allyTeam
+			if (spec and oriTeam[playerID]) then
+				active = false
+				spec = false
+				team = oriTeam[playerID]
+				allyTeam = oriAllyTeam[playerID]
+				oriTeam[playerID] = nil
+				oriAllyTeam[playerID] = nil
+				justResigned = true
 			end
 
-			local afk = gameSecond - (pActivity[playerID] or 0) --mouse activity
 			local _,_,_,isAI,_,_ = spGetTeamInfo(team)
 			if not (spec or isAI) then
+				local afk = gameSecond - (pActivity[playerID] or 0) --mouse activity
 				if (afkTeams[team] == true) then  -- team was AFK
 					if active and ping <= 2000 and afk < AFK_THRESHOLD then -- team no longer AFK, return his or her units
 						spEcho("game_message: Player " .. name .. " is no longer lagging or AFK; returning all his or her units")
@@ -311,7 +320,8 @@ function gadget:GameFrame(n)
 			for j=1,#playersInTeam do
 				local playerID = playersInTeam[j]
 				if not (laggers[playerID] or specList[playerID]) then --Note: we need the extra specList check because Spectators is sharing same teamID as team 0
-					discontinue = true	-- someone on same team is not lagging & not spec, don't move units around!
+					-- someone on same team is not lagging & not spec, don't move units around!
+					discontinue = true
 					break
 				end
 			end
