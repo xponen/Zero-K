@@ -417,16 +417,16 @@ local options = {
         name = "Investment Return",
         desc = "Extra metal income is given to active players who built economy structure until the cost of the structure is paid.",
       },
-      -- {
-        -- key  = "investmentreturn_energy_od",
-        -- name = "Investment Return (Energy only)",
-        -- desc = "Extra overdrive is given to active players who built energy structure until the cost of the structure is paid.",
-      -- },
-      -- {
-        -- key  = "investmentreturn_mex_base",
-        -- name = "Investment Return (Mex only)",
-        -- desc = "Extra metal income is given to active players who built metal extractors until the cost of the extractor is paid.",
-      -- },
+      {
+        key  = "investmentreturn_energy_od",
+        name = "Invest Energy only",
+        desc = "Extra overdrive is given to active players who built energy structure until the cost of the structure is paid.",
+      },
+      {
+        key  = "investmentreturn_mex_base",
+        name = "Invest Mex only",
+        desc = "Extra metal income is given to active players who built metal extractors until the cost of the extractor is paid.",
+      },
       {
         key  = "communism",
         name = "Equal Sharing",
